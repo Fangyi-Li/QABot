@@ -3,6 +3,7 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { QaBotStack } from '../lib/qa_bot-stack';
 
+console.log(process.env.CDK_DEFAULT_ACCOUNT,process.env.CDK_DEFAULT_REGION);
 const app = new cdk.App();
 new QaBotStack(app, 'QaBotStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
@@ -11,7 +12,7 @@ new QaBotStack(app, 'QaBotStack', {
 
   /* Uncomment the next line to specialize this stack for the AWS Account
    * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+  env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION }
 
   /* Uncomment the next line if you know exactly what Account and Region you
    * want to deploy the stack to. */
