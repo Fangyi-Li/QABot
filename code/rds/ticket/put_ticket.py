@@ -1,12 +1,13 @@
 import json
 import boto3
+import os
 
 
 
 rds_client = boto3.client('rds-data')
-database_name = "YOUR_DATABASE_NAME"
-db_cluster_arn = "YOUR_DB_CLUSTER_ARN"
-db_credentials_secrets_store_arn = "YOUR_DB_CREDENTIALS_SECRETS_STORE_ARN"
+database_name = os.getenv('DB_NAME')
+db_cluster_arn = os.getenv('CLUSTER_ARN')
+db_credentials_secrets_store_arn = os.getenv('SECRET_ARN')
 
 def update_ticket(ticket_id, data):
     try:
@@ -54,7 +55,7 @@ def update_ticket(ticket_id, data):
         # Combine the updates into the SQL statement
         sql += ', '.join(updates)
         sql += " WHERE ticket_id = :ticket_id"
-        sql_parameters.append({'name': 'ticket_id', 'value': {'stringValue': ticket_id}})
+        sql_parameters.append({'name': 'ticket_id', 'value': {'longValue': ticket_id}})
 
         # Execute the SQL statement
         response = rds_client.execute_statement(
@@ -68,14 +69,16 @@ def update_ticket(ticket_id, data):
         return {'statusCode': 200, 'body': json.dumps({'message': 'Ticket updated successfully'})}
 
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        return {'statusCode': 500, 'body': json.dumps({'error': str(e), 'type':ticket_id})}
 
 
 def lambda_handler(event, context):
     ticket_id = event['pathParameters']['ticket_id']
-    data = json.loads(event['body'])
 
-    response = update_ticket(ticket_id, data)
+    data = json.loads(event['body'])
+    # data = event['body']
+
+    response = update_ticket(int(ticket_id), data)
     return response
 
 

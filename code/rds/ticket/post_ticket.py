@@ -1,16 +1,36 @@
 import json
 import boto3
+import os
 
 rds_client = boto3.client('rds-data')
-database_name = 'YOUR_DATABASE_NAME'
-db_cluster_arn = 'YOUR_DB_CLUSTER_ARN'
-db_credentials_secrets_store_arn = 'YOUR_DB_CREDENTIALS_SECRETS_STORE_ARN'
+database_name = os.getenv('DB_NAME')
+db_cluster_arn = os.getenv('CLUSTER_ARN')
+db_credentials_secrets_store_arn = os.getenv('SECRET_ARN')
+
+
+def get_next_ticket_id():
+    response = rds_client.execute_statement(
+        secretArn=db_credentials_secrets_store_arn,
+        database=database_name,
+        resourceArn=db_cluster_arn,
+        sql="SELECT MAX(ticket_id) AS max_ticket_id FROM ticket"
+    )
+    print(response)
+    null_ticket_id = None
+    if 'isNull' in response['records'][0][0]:
+        null_ticket_id = response['records'][0][0]['isNull']
+    max_ticket_id = None
+    if not null_ticket_id:
+        max_ticket_id = response['records'][0][0]['longValue']
+    next_ticket_id = max_ticket_id + 1 if max_ticket_id else 1
+    return next_ticket_id
 
 def lambda_handler(event, context):
+    
     try:
         # Extract data from the API Gateway event
         body = json.loads(event['body'])
-        ticket_id = body['ticket_id']
+        ticket_id = get_next_ticket_id()
         question_answer = body['question_answer']
         question_content = body['question_content']
         revised_answer = body['revised_answer']
@@ -60,7 +80,7 @@ def lambda_handler(event, context):
                 :assigned_sa,
                 :ticket_source,
                 :failed_flag,
-                :reminded
+                :reminded,
                 :ticket_creation_date,
                 :ticket_completion_date
             )
@@ -68,22 +88,22 @@ def lambda_handler(event, context):
         
         # Construct the SQL parameters
         sql_parameters = [
-            {'name': 'ticket_id', 'value': {'stringValue': ticket_id}},
+            {'name': 'ticket_id', 'value': {'longValue': ticket_id}},
             {'name': 'question_content', 'value': {'stringValue': question_content}},
-            {'name': 'question_answer', 'value': {'stringValue': question_answer}},
-            {'name': 'revised_answer', 'value': {'stringValue': revised_answer}},
-            {'name': 'tags', 'value': {'stringValue': json.dumps(tags)}},
-            {'name': 'answer_rating', 'value': {'longValue': answer_rating}},
-            {'name': 'difficulty_level', 'value': {'longValue': difficulty_level}},
+            {'name': 'question_answer', 'value': {'stringValue': question_answer}} if question_answer else  {'name': 'question_answer', 'value': {'isNull': True}},
+            {'name': 'revised_answer', 'value': {'stringValue': revised_answer}} if revised_answer else  {'name': 'revised_answer', 'value': {'isNull': True}},
+            {'name': 'tags', 'value': {'stringValue': tags}} if tags else  {'name': 'tags', 'value': {'isNull': True}},
+            {'name': 'answer_rating', 'value': {'longValue': answer_rating}} if answer_rating else  {'name': 'answer_rating', 'value': {'isNull': True}},
+            {'name': 'difficulty_level', 'value': {'longValue': difficulty_level}} if difficulty_level else  {'name': 'difficulty_level', 'value': {'isNull': True}},
             {'name': 'owner_role', 'value': {'stringValue': owner_role}},
             {'name': 'question_owner', 'value': {'stringValue': question_owner}},
             {'name': 'session_id', 'value': {'stringValue': session_id}},
-            {'name': 'assigned_sa', 'value': {'stringValue': json.dumps(assigned_sa)}},
+            {'name': 'assigned_sa', 'value': {'stringValue': assigned_sa}} if assigned_sa else  {'name': 'assigned_sa', 'value': {'isNull': True}},
             {'name': 'ticket_source', 'value': {'stringValue': ticket_source}},
-            {'name': 'failed_flag', 'value': {'booleanValue': failed_flag}},
-            {'name': 'reminded', 'value': {'booleanValue': reminded}},
+            {'name': 'failed_flag', 'value': {'booleanValue': failed_flag}} if failed_flag else  {'name': 'failed_flag', 'value': {'isNull': True}},
+            {'name': 'reminded', 'value': {'booleanValue': reminded}} if reminded else  {'name': 'reminded', 'value': {'isNull': True}},
             {'name': 'ticket_creation_date', 'value': {'stringValue': ticket_creation_date}},
-            {'name': 'ticket_completion_date', 'value': {'stringValue': ticket_completion_date}}
+            {'name': 'ticket_completion_date', 'value': {'stringValue': ticket_completion_date}} if ticket_completion_date else  {'name': 'ticket_completion_date', 'value': {'isNull': True}}
         ]
         
         # Execute the SQL statement
@@ -98,7 +118,10 @@ def lambda_handler(event, context):
         # Return a successful response
         return {
             'statusCode': 200,
-            'body': json.dumps({'message': 'Data inserted successfully'})
+            'body': json.dumps({
+                'message': 'Data inserted successfully',
+                'ticket_id':ticket_id
+            })
         }
     
     except Exception as e:

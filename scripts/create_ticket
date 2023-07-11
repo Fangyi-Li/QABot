@@ -1,18 +1,37 @@
 CREATE TABLE ticket (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  ticket_id INT PRIMARY KEY,
   question_content VARCHAR(255) NOT NULL,
-  question_answer VARCHAR(255),
-  revised_answer VARCHAR(255),
-  tags VARCHAR(255),
-  conversation_rating INT,
-  difficulty_level INT,
+  question_answer VARCHAR(255) DEFAULT NULL,
+  revised_answer VARCHAR(255) DEFAULT NULL,
+  tags VARCHAR(255) DEFAULT NULL,
+  answer_rating INT DEFAULT NULL,
+  difficulty_level INT DEFAULT NULL,
   owner_role VARCHAR(255),
   question_owner VARCHAR(255),
   session_id VARCHAR(255),
-  assigned_sa VARCHAR(255),
+  assigned_sa VARCHAR(255) DEFAULT NULL,
   ticket_source VARCHAR(255),
-  failed_flag BOOLEAN,
-  reminded BOOLEAN,
-  ticket_creation_date DATETIME,
-  ticket_completion_date DATETIME
+  failed_flag BOOLEAN DEFAULT NULL,
+  reminded BOOLEAN DEFAULT NULL,
+  ticket_creation_date DATETIME DEFAULT NULL,
+  ticket_completion_date DATETIME DEFAULT NULL
 );
+
+//testing
+{
+    "question_content":"testing question",
+    "question_answer": null,
+    "revised_answer": null,
+    "tags":null,
+    "answer_rating":null,
+    "difficulty_level":null,
+    "owner_role": "DGR",
+    "question_owner": "peijia",
+    "session_id": "2456",
+    "assigned_sa":null,
+    "ticket_source":"slack",
+    "failed_flag":null,
+    "reminded":null,
+    "ticket_creation_date":"2023-07-10",
+    "ticket_completion_date": null
+}
