@@ -4,8 +4,9 @@ import {
   NestedStackProps,
   StackProps,
   Duration,
-  CustomResource
+  CustomResource,
 } from "aws-cdk-lib";
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from "constructs";
 import { Provider } from 'aws-cdk-lib/custom-resources';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -25,6 +26,8 @@ interface ResourceNestedStackProps extends NestedStackProps {
 }
 
 export class RdsStack extends NestedStack {
+  public readonly clusterDB:rds.ServerlessCluster
+  public readonly api: RestApi
   constructor(scope: Construct, id: string, props: ResourceNestedStackProps) {
     super(scope, id, props);
 
@@ -52,6 +55,7 @@ export class RdsStack extends NestedStack {
       enableDataApi: true,
       securityGroups: [props.dataSecurityGroup],
     });
+    this.clusterDB = cluster;
     
     const ticketTableLambdaFunction = new lambda.Function(this, "TicketCreateFunction", {
       runtime: lambda.Runtime.PYTHON_3_7,
@@ -63,6 +67,7 @@ export class RdsStack extends NestedStack {
         DB_NAME: "QABotDB",
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
       },
+      timeout: Duration.seconds(300),
       vpc: vpc,
       vpcSubnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
@@ -130,6 +135,7 @@ export class RdsStack extends NestedStack {
     const ticket = root.addResource("ticket");
     ticket.addResource('{ticket_id}').addMethod("PUT", new LambdaIntegration(putFn));
     ticket.addMethod("POST", new LambdaIntegration(postFn));
+    this.api = api;
     
     // const ticketTableCustomResource = new CustomResource(this, 'TicketTableCustomResource', {
     //   serviceToken: ticketTableLambdaFunction.functionArn,
@@ -139,14 +145,59 @@ export class RdsStack extends NestedStack {
     //     DatabaseName: 'QABotDB',
     //   },
     // });
-    const provider = new Provider(this, 'CustomResourceProvider', {
-      onEventHandler: ticketTableLambdaFunction,
-      logRetention: RetentionDays.ONE_WEEK,
-    });
+    
+    
+    // const provider = new Provider(this, 'CustomResourceProvider', {
+    //   onEventHandler: ticketTableLambdaFunction,
+    //   logRetention: RetentionDays.ONE_WEEK,
+    // });
 
-    new CustomResource(this, 'customResourceResult', {
-      serviceToken: provider.serviceToken,
+    // new cr.AwsCustomResource(this, 'customResourceResult', {
+    //   onCreate: {
+    //   serviceToken: provider.serviceToken,
+    //   properties: {
+    //     ClusterArn: cluster.clusterArn,
+    //     SecretArn: cluster.secret?.secretArn || '',
+    //     DatabaseName: 'QABotDB',
+    //   },}
+    // });
+      const sqlStatement = "CREATE TABLE ticket ("+
+      "ticket_id INT PRIMARY KEY,"+
+      "question_content VARCHAR(255) NOT NULL,"+
+      "question_answer VARCHAR(255) DEFAULT NULL,"+
+      "revised_answer VARCHAR(255) DEFAULT NULL,"+
+      "tags VARCHAR(255) DEFAULT NULL,"+
+      "answer_rating INT DEFAULT NULL,"+
+      "difficulty_level INT DEFAULT NULL,"+
+      "owner_role VARCHAR(255),"+
+      "question_owner VARCHAR(255),"+
+      "session_id VARCHAR(255),"+
+      "assigned_sa VARCHAR(255) DEFAULT NULL,"+
+      "ticket_source VARCHAR(255),"+
+      "failed_flag BOOLEAN DEFAULT NULL,"+
+      "priority VARCHAR(255) DEFAULT NULL,"+
+      "reminded BOOLEAN DEFAULT NULL,"+
+      "ticket_creation_date DATETIME DEFAULT NULL,"+
+      "ticket_completion_date DATETIME DEFAULT NULL"+
+    ") DEFAULT CHARACTER SET utf8mb4;"; 
+    
+    new cr.AwsCustomResource(this, 'customResourceResult', {
+      onCreate: {
+        service: 'RDSDataService',
+        action: 'executeStatement',
+        parameters: {
+          database: 'QABotDB',
+          secretArn: cluster.secret?.secretArn || '',
+          resourceArn: cluster.clusterArn,
+          sql: sqlStatement,
+          parameters: [],
+          includeResultMetadata: true,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of('aws-custom-execute-sql-eth'),
+      },
     });
+    
+
 
     new CfnOutput(this, `API gateway endpoint url`, { value: `${api.url}` });
   }

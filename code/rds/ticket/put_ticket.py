@@ -54,7 +54,7 @@ def update_ticket(ticket_id, data):
             
         if 'ticket_completion_date' in data:
             updates.append('ticket_completion_date = :ticket_completion_date')
-            sql_parameters.append({'name': 'ticket_completion_date', 'value': {'booleanValue': data['ticket_completion_date']}})
+            sql_parameters.append({'name': 'ticket_completion_date', 'value': {'stringValue': data['ticket_completion_date']}})
 
         # Check if any updates are specified
         if not updates:

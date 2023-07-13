@@ -16,7 +16,7 @@ def lambda_handler(event, context):
 
         sql = """
             CREATE TABLE ticket (
-              ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+              ticket_id INT PRIMARY KEY,
               question_content VARCHAR(255) NOT NULL,
               question_answer VARCHAR(255) DEFAULT NULL,
               revised_answer VARCHAR(255) DEFAULT NULL,
@@ -29,10 +29,11 @@ def lambda_handler(event, context):
               assigned_sa VARCHAR(255) DEFAULT NULL,
               ticket_source VARCHAR(255),
               failed_flag BOOLEAN DEFAULT NULL,
+              priority VARCHAR(255) DEFAULT NULL,
               reminded BOOLEAN DEFAULT NULL,
               ticket_creation_date DATETIME DEFAULT NULL,
               ticket_completion_date DATETIME DEFAULT NULL
-            )
+            ) DEFAULT CHARACTER SET utf8mb4;
         """
 
         response = client.execute_statement(

@@ -12,11 +12,11 @@ interface Ec2StackProps extends NestedStackProps {
 export class VpcStack extends NestedStack {
 
 
-  vpc;
-  subnets;
-  securityGroups;
-  publicSecurityGroup;
-  dataSecurityGroup;
+  vpc: ec2.IVpc;
+  subnets: any;
+  securityGroups: ec2.SecurityGroup[];
+  publicSecurityGroup: ec2.SecurityGroup;
+  dataSecurityGroup: ec2.SecurityGroup;
   /**
    *
    * @param {Construct} scope
@@ -31,7 +31,7 @@ export class VpcStack extends NestedStack {
     //create a new vpc
     if (!existing_vpc_id || existing_vpc_id === 'optional')
     {
-        this.vpc = new ec2.Vpc(this, 'QAChat-workshop-Vpc', {
+        this.vpc = new ec2.Vpc(this, 'QABot-Vpc', {
           ipAddresses: ec2.IpAddresses.cidr('10.22.0.0/16'),
             maxAzs: 2,
             subnetConfiguration: [
@@ -64,7 +64,7 @@ export class VpcStack extends NestedStack {
     }
     else{
       this.vpc = ec2.Vpc.fromLookup(
-        this, 'QAChat-workshop-Vpc',
+        this, 'QABot-VPC',
         {
           vpcId:existing_vpc_id,
         }
