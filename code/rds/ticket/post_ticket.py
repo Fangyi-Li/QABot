@@ -43,6 +43,7 @@ def lambda_handler(event, context):
         assigned_sa = body['assigned_sa']
         ticket_source = body['ticket_source']
         failed_flag = body['failed_flag']
+        priority = body['priority']
         reminded = body['reminded']
         ticket_creation_date = body['ticket_creation_date']
         ticket_completion_date = body['ticket_completion_date']
@@ -63,6 +64,7 @@ def lambda_handler(event, context):
                 assigned_sa,
                 ticket_source,
                 failed_flag,
+                priority,
                 reminded,
                 ticket_creation_date,
                 ticket_completion_date
@@ -80,6 +82,7 @@ def lambda_handler(event, context):
                 :assigned_sa,
                 :ticket_source,
                 :failed_flag,
+                :priority,
                 :reminded,
                 :ticket_creation_date,
                 :ticket_completion_date
@@ -101,6 +104,7 @@ def lambda_handler(event, context):
             {'name': 'assigned_sa', 'value': {'stringValue': assigned_sa}} if assigned_sa else  {'name': 'assigned_sa', 'value': {'isNull': True}},
             {'name': 'ticket_source', 'value': {'stringValue': ticket_source}},
             {'name': 'failed_flag', 'value': {'booleanValue': failed_flag}} if failed_flag else  {'name': 'failed_flag', 'value': {'isNull': True}},
+            {'name': 'priority', 'value': {'stringValue': priority}} if priority else  {'name': 'priority', 'value': {'isNull': True}},
             {'name': 'reminded', 'value': {'booleanValue': reminded}} if reminded else  {'name': 'reminded', 'value': {'isNull': True}},
             {'name': 'ticket_creation_date', 'value': {'stringValue': ticket_creation_date}},
             {'name': 'ticket_completion_date', 'value': {'stringValue': ticket_completion_date}} if ticket_completion_date else  {'name': 'ticket_completion_date', 'value': {'isNull': True}}

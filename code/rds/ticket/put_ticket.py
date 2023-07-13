@@ -35,10 +35,18 @@ def update_ticket(ticket_id, data):
         if 'answer_rating' in data:
             updates.append('answer_rating = :answer_rating')
             sql_parameters.append({'name': 'answer_rating', 'value': {'longValue': data['answer_rating']}})
+            
+        if 'assigned_sa' in data:
+            updates.append('assigned_sa = :assigned_sa')
+            sql_parameters.append({'name': 'assigned_sa', 'value': {'stringValue': data['assigned_sa']}})
 
         if 'failed_flag' in data:
             updates.append('failed_flag = :failed_flag')
             sql_parameters.append({'name': 'failed_flag', 'value': {'booleanValue': data['failed_flag']}})
+            
+        if 'priority' in data:
+            updates.append('priority = :priority')
+            sql_parameters.append({'name': 'priority', 'value': {'stringValue': data['priority']}})
 
         if 'reminded' in data:
             updates.append('reminded = :reminded')

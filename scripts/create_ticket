@@ -12,12 +12,13 @@ CREATE TABLE ticket (
   assigned_sa VARCHAR(255) DEFAULT NULL,
   ticket_source VARCHAR(255),
   failed_flag BOOLEAN DEFAULT NULL,
+  priority VARCHAR(255) DEFAULT NULL,
   reminded BOOLEAN DEFAULT NULL,
   ticket_creation_date DATETIME DEFAULT NULL,
   ticket_completion_date DATETIME DEFAULT NULL
-);
+) DEFAULT CHARACTER SET utf8mb4;
 
-//testing
+//testing post
 {
     "question_content":"testing question",
     "question_answer": null,

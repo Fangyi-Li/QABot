@@ -3,9 +3,12 @@ import {
   NestedStack,
   NestedStackProps,
   StackProps,
-  Duration
+  Duration,
+  CustomResource
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
+import { Provider } from 'aws-cdk-lib/custom-resources';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { SubnetType } from "aws-cdk-lib/aws-ec2";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
@@ -49,6 +52,25 @@ export class RdsStack extends NestedStack {
       enableDataApi: true,
       securityGroups: [props.dataSecurityGroup],
     });
+    
+    const ticketTableLambdaFunction = new lambda.Function(this, "TicketCreateFunction", {
+      runtime: lambda.Runtime.PYTHON_3_7,
+      handler: "create_ticket.lambda_handler",
+      code: lambda.Code.fromAsset("../code/rds/ticket"),
+      environment: {
+        CLUSTER_ARN: cluster.clusterArn,
+        SECRET_ARN: cluster.secret?.secretArn || "",
+        DB_NAME: "QABotDB",
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
+      },
+      vpc: vpc,
+      vpcSubnets: {
+        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+      },
+    });
+    
+    
+
 
     // const secret = new secrets.Secret(this, "AuroraSecret", {
     //   secretName: "AuroraSecret",
@@ -109,6 +131,22 @@ export class RdsStack extends NestedStack {
     ticket.addResource('{ticket_id}').addMethod("PUT", new LambdaIntegration(putFn));
     ticket.addMethod("POST", new LambdaIntegration(postFn));
     
+    // const ticketTableCustomResource = new CustomResource(this, 'TicketTableCustomResource', {
+    //   serviceToken: ticketTableLambdaFunction.functionArn,
+    //   properties: {
+    //     ClusterArn: cluster.clusterArn,
+    //     SecretArn: cluster.secret?.secretArn || '',
+    //     DatabaseName: 'QABotDB',
+    //   },
+    // });
+    const provider = new Provider(this, 'CustomResourceProvider', {
+      onEventHandler: ticketTableLambdaFunction,
+      logRetention: RetentionDays.ONE_WEEK,
+    });
+
+    new CustomResource(this, 'customResourceResult', {
+      serviceToken: provider.serviceToken,
+    });
 
     new CfnOutput(this, `API gateway endpoint url`, { value: `${api.url}` });
   }
