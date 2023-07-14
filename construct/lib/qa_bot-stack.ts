@@ -7,6 +7,7 @@ import { AttributeType, Table } from "aws-cdk-lib/aws-dynamodb";
 import { VpcStack } from './vpc-stack';
 import { Ec2Stack } from './ec2-stack';
 import { RdsStack } from './rds-stack';
+import { saRdsStack } from './sa-rds-stack';
 
 export class QaBotStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -22,8 +23,10 @@ export class QaBotStack extends cdk.Stack {
 
     const ec2stack = new Ec2Stack(this,'Ec2Stack',{vpc:vpc,securityGroup:securityGroups[0]});
 
-    const rdsStack = new RdsStack(this, 'RdsStack', {vpc:vpc, dataSecurityGroup:securityGroups[2]})
+    const rdsStack = new RdsStack(this, 'RdsStack', {vpc:vpc, dataSecurityGroup:securityGroups[2]});
+    const cluster = rdsStack.clusterDB;
+    const api = rdsStack.api
 
-
+    const saStack = new saRdsStack(this, 'SaRdsStack', {vpc:vpc, cluster:cluster, api:api});
   }
 }

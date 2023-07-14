@@ -18,15 +18,15 @@ def update_ticket(ticket_id, data):
 
         if 'question_answer' in data:
             updates.append('question_answer = :question_answer')
-            sql_parameters.append({'name': 'question_answer', 'value': {'stringValue': json.dumps(data['question_answer'])}})
+            sql_parameters.append({'name': 'question_answer', 'value': {'stringValue': data['question_answer']}})
 
         if 'revised_answer' in data:
             updates.append('revised_answer = :revised_answer')
-            sql_parameters.append({'name': 'revised_answer', 'value': {'stringValue': json.dumps(data['revised_answer'])}})
+            sql_parameters.append({'name': 'revised_answer', 'value': {'stringValue': data['revised_answer']}})
 
         if 'tags' in data:
             updates.append('tags = :tags')
-            sql_parameters.append({'name': 'tags', 'value': {'stringValue': json.dumps(data['tags'])}})
+            sql_parameters.append({'name': 'tags', 'value': {'stringValue': data['tags']}})
 
         if 'difficulty_level' in data:
             updates.append('difficulty_level = :difficulty_level')

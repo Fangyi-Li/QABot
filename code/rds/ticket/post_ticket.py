@@ -1,6 +1,10 @@
 import json
 import boto3
 import os
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 rds_client = boto3.client('rds-data')
 database_name = os.getenv('DB_NAME')
@@ -24,10 +28,43 @@ def get_next_ticket_id():
         max_ticket_id = response['records'][0][0]['longValue']
     next_ticket_id = max_ticket_id + 1 if max_ticket_id else 1
     return next_ticket_id
+    
+def create_table():
+    sql = """
+            CREATE TABLE IF NOT EXISTS ticket (
+              ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+              question_content VARCHAR(255) NOT NULL,
+              question_answer VARCHAR(255) DEFAULT NULL,
+              revised_answer VARCHAR(255) DEFAULT NULL,
+              tags VARCHAR(255) DEFAULT NULL,
+              answer_rating INT DEFAULT NULL,
+              difficulty_level INT DEFAULT NULL,
+              owner_role VARCHAR(255),
+              question_owner VARCHAR(255),
+              session_id VARCHAR(255),
+              assigned_sa VARCHAR(255) DEFAULT NULL,
+              ticket_source VARCHAR(255),
+              failed_flag BOOLEAN DEFAULT NULL,
+              priority VARCHAR(255) DEFAULT NULL,
+              reminded BOOLEAN DEFAULT NULL,
+              ticket_creation_date DATETIME DEFAULT NULL,
+              ticket_completion_date DATETIME DEFAULT NULL
+            ) DEFAULT CHARACTER SET utf8mb4;
+        """
+
+    response = rds_client.execute_statement(
+        secretArn=db_credentials_secrets_store_arn,
+        database=database_name,
+        resourceArn=db_cluster_arn,
+        sql=sql
+    )
+
+    logger.info('Table created successfully')
 
 def lambda_handler(event, context):
     
     try:
+        create_table();
         # Extract data from the API Gateway event
         body = json.loads(event['body'])
         ticket_id = get_next_ticket_id()

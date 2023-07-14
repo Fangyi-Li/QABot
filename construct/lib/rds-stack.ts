@@ -4,7 +4,7 @@ import {
   NestedStackProps,
   StackProps,
   Duration,
-  CustomResource,
+  CustomResource, Stack
 } from "aws-cdk-lib";
 import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from "constructs";
@@ -19,6 +19,8 @@ import * as dotenv from "dotenv";
 dotenv.config();
 const ssm = require("aws-cdk-lib/aws-ssm");
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
+
 
 interface ResourceNestedStackProps extends NestedStackProps {
   readonly vpc: ec2.IVpc;
@@ -56,25 +58,7 @@ export class RdsStack extends NestedStack {
       securityGroups: [props.dataSecurityGroup],
     });
     this.clusterDB = cluster;
-    
-    const ticketTableLambdaFunction = new lambda.Function(this, "TicketCreateFunction", {
-      runtime: lambda.Runtime.PYTHON_3_7,
-      handler: "create_ticket.lambda_handler",
-      code: lambda.Code.fromAsset("../code/rds/ticket"),
-      environment: {
-        CLUSTER_ARN: cluster.clusterArn,
-        SECRET_ARN: cluster.secret?.secretArn || "",
-        DB_NAME: "QABotDB",
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
-      },
-      timeout: Duration.seconds(300),
-      vpc: vpc,
-      vpcSubnets: {
-        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
-      },
-    });
-    
-    
+ 
 
 
     // const secret = new secrets.Secret(this, "AuroraSecret", {
@@ -161,41 +145,47 @@ export class RdsStack extends NestedStack {
     //     DatabaseName: 'QABotDB',
     //   },}
     // });
-      const sqlStatement = "CREATE TABLE ticket ("+
-      "ticket_id INT PRIMARY KEY,"+
-      "question_content VARCHAR(255) NOT NULL,"+
-      "question_answer VARCHAR(255) DEFAULT NULL,"+
-      "revised_answer VARCHAR(255) DEFAULT NULL,"+
-      "tags VARCHAR(255) DEFAULT NULL,"+
-      "answer_rating INT DEFAULT NULL,"+
-      "difficulty_level INT DEFAULT NULL,"+
-      "owner_role VARCHAR(255),"+
-      "question_owner VARCHAR(255),"+
-      "session_id VARCHAR(255),"+
-      "assigned_sa VARCHAR(255) DEFAULT NULL,"+
-      "ticket_source VARCHAR(255),"+
-      "failed_flag BOOLEAN DEFAULT NULL,"+
-      "priority VARCHAR(255) DEFAULT NULL,"+
-      "reminded BOOLEAN DEFAULT NULL,"+
-      "ticket_creation_date DATETIME DEFAULT NULL,"+
-      "ticket_completion_date DATETIME DEFAULT NULL"+
-    ") DEFAULT CHARACTER SET utf8mb4;"; 
+    //   const sqlStatement = "CREATE TABLE ticket ("+
+    //   "ticket_id INT PRIMARY KEY,"+
+    //   "question_content VARCHAR(255) NOT NULL,"+
+    //   "question_answer VARCHAR(255) DEFAULT NULL,"+
+    //   "revised_answer VARCHAR(255) DEFAULT NULL,"+
+    //   "tags VARCHAR(255) DEFAULT NULL,"+
+    //   "answer_rating INT DEFAULT NULL,"+
+    //   "difficulty_level INT DEFAULT NULL,"+
+    //   "owner_role VARCHAR(255),"+
+    //   "question_owner VARCHAR(255),"+
+    //   "session_id VARCHAR(255),"+
+    //   "assigned_sa VARCHAR(255) DEFAULT NULL,"+
+    //   "ticket_source VARCHAR(255),"+
+    //   "failed_flag BOOLEAN DEFAULT NULL,"+
+    //   "priority VARCHAR(255) DEFAULT NULL,"+
+    //   "reminded BOOLEAN DEFAULT NULL,"+
+    //   "ticket_creation_date DATETIME DEFAULT NULL,"+
+    //   "ticket_completion_date DATETIME DEFAULT NULL"+
+    // ") DEFAULT CHARACTER SET utf8mb4;"; 
+
     
-    new cr.AwsCustomResource(this, 'customResourceResult', {
-      onCreate: {
-        service: 'RDSDataService',
-        action: 'executeStatement',
-        parameters: {
-          database: 'QABotDB',
-          secretArn: cluster.secret?.secretArn || '',
-          resourceArn: cluster.clusterArn,
-          sql: sqlStatement,
-          parameters: [],
-          includeResultMetadata: true,
-        },
-        physicalResourceId: cr.PhysicalResourceId.of('aws-custom-execute-sql-eth'),
-      },
-    });
+    // const statement = new PolicyStatement({
+    //   actions: ['rds-data:ExecuteStatement'],
+    //   effect: Effect.ALLOW,
+    //   resources: [cluster.secret?.secretArn || ''],
+    // });
+    
+    // new cr.AwsCustomResource(this, 'customResourceResult', {
+    //   onCreate: {
+    //     service: 'Lambda',
+    //     action: 'invoke',
+    //     parameters: {
+    //       FunctionName: ticketTableLambda.functionName,
+    //       Payload: JSON.stringify({
+    //         sql: sqlStatement,
+    //       }),
+    //     },
+    //     physicalResourceId: cr.PhysicalResourceId.of('ticket-table-creation'),
+    //   },
+    //   policy: cr.AwsCustomResourcePolicy.fromStatements([statement])
+    // });
     
 
 
