@@ -36,3 +36,31 @@ CREATE TABLE ticket (
     "ticket_creation_date":"2023-07-10",
     "ticket_completion_date": null
 }
+
+
+// sa post test
+{
+    "login":"peijiaw",
+    "name":"peijia",
+    "wechat_id":"1013792627",
+    "team":"DGRSA",
+    "site":"Beijing",
+    "wechat_user":false,
+    "slack_user":true,
+    "mini_program_user":false,
+    "creation_time":"2023-07-15",
+    "during_employment":true
+}
+
+//sa update
+{
+    "login":"peijiaw",
+    "wechat_id":"1013792626",
+    "team":"SA",
+    "site":"Beijing",
+    "wechat_user":false,
+    "slack_user":false,
+    "mini_program_user":true,
+    "creation_time":"2023-07-15",
+    "during_employment":false
+}

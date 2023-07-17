@@ -24,41 +24,25 @@ import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
 interface ResourceNestedStackProps extends NestedStackProps {
   readonly vpc: ec2.IVpc;
-  readonly dataSecurityGroup: ec2.SecurityGroup;
+  readonly cluster: rds.ServerlessCluster;
+  readonly apiId: string;
+  readonly rootResourceId: string;
 }
 
 export class RdsStack extends NestedStack {
-  public readonly clusterDB:rds.ServerlessCluster
-  public readonly api: RestApi
+  // public readonly cluster:rds.ServerlessCluster
+  // public readonly api: RestApi
   constructor(scope: Construct, id: string, props: ResourceNestedStackProps) {
     super(scope, id, props);
 
     const vpc = props.vpc;
 
-    /* Secrets Manager Endpoint */
-    vpc.addInterfaceEndpoint("sm", {
-      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+    const cluster = props.cluster;
+    
+    const api = RestApi.fromRestApiAttributes(this, 'RestApi', {
+      restApiId: props.apiId,
+      rootResourceId: props.rootResourceId,
     });
-
-    /* RDS Data API Endpoint */
-    vpc.addInterfaceEndpoint("rds_data", {
-      service: ec2.InterfaceVpcEndpointAwsService.RDS_DATA,
-    });
-
-    const cluster = new rds.ServerlessCluster(this, "QABot Cluster", {
-      engine: rds.DatabaseClusterEngine.auroraMysql({
-        version: rds.AuroraMysqlEngineVersion.VER_2_07_1,
-      }),
-      defaultDatabaseName: "QABotDB",
-      vpc,
-      vpcSubnets: {
-        subnetType: SubnetType.PRIVATE_ISOLATED,
-      },
-      enableDataApi: true,
-      securityGroups: [props.dataSecurityGroup],
-    });
-    this.clusterDB = cluster;
- 
 
 
     // const secret = new secrets.Secret(this, "AuroraSecret", {
@@ -111,16 +95,11 @@ export class RdsStack extends NestedStack {
 
     cluster.grantDataApiAccess(putFn);
 
-    const api = new RestApi(this, "DatabaseApi", {
-      restApiName: "QAbot Api",
-    });
-
     const root = api.root.addResource("qabot");
     const ticket = root.addResource("ticket");
     ticket.addResource('{ticket_id}').addMethod("PUT", new LambdaIntegration(putFn));
     ticket.addMethod("POST", new LambdaIntegration(postFn));
-    this.api = api;
-    
+
     // const ticketTableCustomResource = new CustomResource(this, 'TicketTableCustomResource', {
     //   serviceToken: ticketTableLambdaFunction.functionArn,
     //   properties: {
@@ -186,9 +165,6 @@ export class RdsStack extends NestedStack {
     //   },
     //   policy: cr.AwsCustomResourcePolicy.fromStatements([statement])
     // });
-    
-
-
-    new CfnOutput(this, `API gateway endpoint url`, { value: `${api.url}` });
+  
   }
 }

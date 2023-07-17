@@ -13,7 +13,7 @@ db_credentials_secrets_store_arn = os.getenv('SECRET_ARN')
 
 def create_table():
     sql = """
-            CREATE TABLE IF NOT EXISTS ticket (
+            CREATE TABLE IF NOT EXISTS sa_profile (
               login VARCHAR(225) PRIMARY KEY,
               name VARCHAR(255) NOT NULL,
               wechat_id VARCHAR(255) DEFAULT NULL,
@@ -23,7 +23,7 @@ def create_table():
               slack_user BOOLEAN DEFAULT NULL,
               mini_program_user BOOLEAN DEFAULT NULL,
               creation_time DATETIME DEFAULT NULL,
-              during_employment BOOLEAN NOT NULL,
+              during_employment BOOLEAN NOT NULL
             ) DEFAULT CHARACTER SET utf8mb4;
         """
 
@@ -57,7 +57,7 @@ def lambda_handler(event, context):
         
         # Construct the SQL statement for inserting data
         sql = """
-            INSERT INTO ticket (
+            INSERT INTO sa_profile (
                 login,
                 name,
                 wechat_id,
@@ -88,9 +88,10 @@ def lambda_handler(event, context):
             {'name': 'name', 'value': {'stringValue': name}},
             {'name': 'wechat_id', 'value': {'stringValue': wechat_id}} if wechat_id else  {'name': 'wechat_id', 'value': {'isNull': True}},
             {'name': 'team', 'value': {'stringValue': team}} if team else  {'name': 'team', 'value': {'isNull': True}},
+            {'name': 'site', 'value': {'stringValue': site}} if site else  {'name': 'site', 'value': {'isNull': True}},
             {'name': 'wechat_user', 'value': {'booleanValue': wechat_user}} if wechat_user else  {'name': 'wechat_user', 'value': {'isNull': True}},
             {'name': 'slack_user', 'value': {'booleanValue': slack_user}} if slack_user else  {'name': 'slack_user', 'value': {'isNull': True}},
-            {'name': 'mini_program_user', 'value': {'booleanValue': mini_program_user}} if mini_program_user else  {'name': 'mini_user', 'value': {'isNull': True}},
+            {'name': 'mini_program_user', 'value': {'booleanValue': mini_program_user}} if mini_program_user else  {'name': 'mini_program_user', 'value': {'isNull': True}},
             {'name': 'creation_time', 'value': {'stringValue': creation_time}},
             {'name': 'during_employment', 'value': {'booleanValue': during_employment}}
         ]

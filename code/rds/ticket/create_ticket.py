@@ -16,7 +16,7 @@ def lambda_handler(event, context):
 
         sql = """
             CREATE TABLE ticket (
-              ticket_id INT PRIMARY KEY,
+              ticket_id INT AUTO_INCREMENT PRIMARY KEY,
               question_content VARCHAR(255) NOT NULL,
               question_answer VARCHAR(255) DEFAULT NULL,
               revised_answer VARCHAR(255) DEFAULT NULL,
@@ -26,7 +26,7 @@ def lambda_handler(event, context):
               owner_role VARCHAR(255),
               question_owner VARCHAR(255),
               session_id VARCHAR(255),
-              assigned_sa VARCHAR(255) DEFAULT NULL,
+              assigned_sa VARCHAR(255),
               ticket_source VARCHAR(255),
               failed_flag BOOLEAN DEFAULT NULL,
               priority VARCHAR(255) DEFAULT NULL,

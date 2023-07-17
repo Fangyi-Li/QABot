@@ -22,7 +22,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 interface ResourceNestedStackProps extends NestedStackProps {
   readonly vpc: ec2.IVpc;
   readonly cluster: rds.ServerlessCluster;
-  readonly api: RestApi
+  readonly apiId: string;
+  readonly rootResourceId: string;
 }
 
 export class saRdsStack extends NestedStack {
@@ -35,8 +36,11 @@ export class saRdsStack extends NestedStack {
 
     const cluster = props.cluster;
     
-    const api = props.api
-  
+    const api = RestApi.fromRestApiAttributes(this, 'RestApi', {
+      restApiId: props.apiId,
+      rootResourceId: props.rootResourceId,
+    });
+    
     // sa profile
     const postSAFn = new lambda.Function(this, "SAProfilePostFunction", {
       runtime: lambda.Runtime.PYTHON_3_7,
@@ -52,6 +56,7 @@ export class saRdsStack extends NestedStack {
       vpcSubnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
       },
+      timeout: Duration.seconds(30)
     });
 
     cluster.grantDataApiAccess(postSAFn);
