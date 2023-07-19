@@ -72,6 +72,7 @@ export class RdsStack extends NestedStack {
       vpcSubnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
       },
+      timeout: Duration.seconds(30)
     });
 
     cluster.grantDataApiAccess(postFn);

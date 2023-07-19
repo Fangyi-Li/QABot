@@ -46,7 +46,6 @@ def create_table():
               ticket_source VARCHAR(255),
               failed_flag BOOLEAN DEFAULT NULL,
               priority VARCHAR(255) DEFAULT NULL,
-              reminded BOOLEAN DEFAULT NULL,
               ticket_creation_date DATETIME DEFAULT NULL,
               ticket_completion_date DATETIME DEFAULT NULL
             ) DEFAULT CHARACTER SET utf8mb4;
@@ -81,7 +80,6 @@ def lambda_handler(event, context):
         ticket_source = body['ticket_source']
         failed_flag = body['failed_flag']
         priority = body['priority']
-        reminded = body['reminded']
         ticket_creation_date = body['ticket_creation_date']
         ticket_completion_date = body['ticket_completion_date']
         
@@ -102,7 +100,6 @@ def lambda_handler(event, context):
                 ticket_source,
                 failed_flag,
                 priority,
-                reminded,
                 ticket_creation_date,
                 ticket_completion_date
             ) VALUES (
@@ -120,7 +117,6 @@ def lambda_handler(event, context):
                 :ticket_source,
                 :failed_flag,
                 :priority,
-                :reminded,
                 :ticket_creation_date,
                 :ticket_completion_date
             )
@@ -142,7 +138,6 @@ def lambda_handler(event, context):
             {'name': 'ticket_source', 'value': {'stringValue': ticket_source}},
             {'name': 'failed_flag', 'value': {'booleanValue': failed_flag}} if failed_flag else  {'name': 'failed_flag', 'value': {'isNull': True}},
             {'name': 'priority', 'value': {'stringValue': priority}} if priority else  {'name': 'priority', 'value': {'isNull': True}},
-            {'name': 'reminded', 'value': {'booleanValue': reminded}} if reminded else  {'name': 'reminded', 'value': {'isNull': True}},
             {'name': 'ticket_creation_date', 'value': {'stringValue': ticket_creation_date}},
             {'name': 'ticket_completion_date', 'value': {'stringValue': ticket_completion_date}} if ticket_completion_date else  {'name': 'ticket_completion_date', 'value': {'isNull': True}}
         ]
