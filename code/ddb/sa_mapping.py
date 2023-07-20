@@ -15,24 +15,7 @@ def lambda_handler(event, context):
     table = dynamodb.Table(table_name)
     body = json.loads(event['body'])
     try:
-        # response = table.scan()
-        # items = response.get('Items', [])
-
-        # if len(items) == 0:
-        #     # Read the CSV file from S3
-        #     csv_file = s3.get_object(Bucket=bucket_name, Key=object_key)
-        #     csv_rows = csv_file['Body'].read().decode('utf-8').splitlines()
-        #     csv_reader = csv.DictReader(csv_rows)
-            
-        #     for row in csv_reader:
-        #         item = {
-        #             "db_login": row['bd_login'], 
-        #             "sa_login": row['sa_login'],  
-        #         }
-        
-        #         # Save the item to DynamoDB
-        #     table.put_item(Item=item)
-            
+       
         if http_method == 'POST':
             return post_handler(body, table)
         elif http_method == 'PUT':
@@ -136,7 +119,7 @@ def delete_handler(body, table):
     response = table.delete_item(Key={'bd_login': bd_login})
     return {
             'statusCode': 200,
-            'body': 'BD mapping deleted successfully.'
+            'body': json.dumps({'message':'BD mapping deleted successfully.'})
         }
     
 def get_response(response, update=False, bd_login=None):

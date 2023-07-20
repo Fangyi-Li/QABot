@@ -11,9 +11,9 @@ def lambda_handler(event, context):
     request_type = event['RequestType']
     # table = dynamodb.Table(table_name)
     if request_type == 'Create':
-        return on_create(event, table)
+        return on_create(event)
 
-def on_create(event, table):
+def on_create(event):
     try:
         with open("QABot/scripts/sa_mapping.csv", "r") as f:
             s3.upload_fileobj(f, bucket_name, object_key)

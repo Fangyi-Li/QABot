@@ -6,6 +6,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from "constructs";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from "aws-cdk-lib/aws-iam";
 
 interface ResourceNestedStackProps extends NestedStackProps {
@@ -41,7 +42,7 @@ export class saMappingStack extends NestedStack {
     })
     myRole.addToPolicy(new iam.PolicyStatement({
       resources:['arn:aws:dynamodb:*','arn:aws:s3:::*'],
-      actions:["s3:PutObject","s3:DeleteObject", "dynamodb:*"]
+      actions:["s3:PutObject","s3:*", "dynamodb:*"]
     }))
     
     const onEvent = new lambda.Function(this, "CreateMappingFunction", {
@@ -49,20 +50,45 @@ export class saMappingStack extends NestedStack {
       handler: "create_sa_mapping.lambda_handler",
       code: lambda.Code.fromAsset("../code/ddb/"),
       role: myRole,
+      timeout: Duration.minutes(1),
       environment: {
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
         OBJECT_KEY: 'sa_mapping.csv'
       },
     });
-  
+    onEvent.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:GetBucketNotification', 's3:PutBucketNotification'],
+        effect: iam.Effect.ALLOW,
+        resources: [ bucket.bucketArn ]
+      })
+    );
+    onEvent.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['dynamodb:*'],
+        effect: iam.Effect.ALLOW,
+        resources: [ bucket.bucketArn ]
+      })
+    );
+    
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED_PUT,
+      new s3n.LambdaDestination(onEvent), {
+        prefix:'sa_mapping.csv'
+      }
+    )
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED_COMPLETE_MULTIPART_UPLOAD,
+      new s3n.LambdaDestination(onEvent), 
+    )
 
-    const myProvider= new cr.Provider(this, 'MyProvider', {
-      onEventHandler: onEvent,       
-      // role: myRole, // must be assumable by the `lambda.amazonaws.com` service principal
-    });
+    // const myProvider= new cr.Provider(this, 'MyProvider', {
+    //   onEventHandler: onEvent,       
+    //   // role: myRole, // must be assumable by the `lambda.amazonaws.com` service principal
+    // });
 
-    const custom = new CustomResource(this, 'Resource1', { serviceToken: myProvider.serviceToken });
+    // const custom = new CustomResource(this, 'Resource1', { serviceToken: myProvider.serviceToken });
     // table.node.addDependency(custom);
     
     const postFn = new lambda.Function(this, "PostMappingFunction", {
@@ -71,6 +97,8 @@ export class saMappingStack extends NestedStack {
       code: lambda.Code.fromAsset("../code/ddb/"),
       environment: {
         TABLE_NAME: table.tableName,
+        BUCKET_NAME: bucket.bucketName,
+        OBJECT_KEY: 'sa_mapping.csv'
       },
     });
 
@@ -80,6 +108,8 @@ export class saMappingStack extends NestedStack {
       code: lambda.Code.fromAsset("../code/ddb/"),
       environment: {
         TABLE_NAME: table.tableName,
+        BUCKET_NAME: bucket.bucketName,
+        OBJECT_KEY: 'sa_mapping.csv'
       },
     });
     
@@ -89,6 +119,8 @@ export class saMappingStack extends NestedStack {
       code: lambda.Code.fromAsset("../code/ddb/"),
       environment: {
         TABLE_NAME: table.tableName,
+        BUCKET_NAME: bucket.bucketName,
+        OBJECT_KEY: 'sa_mapping.csv'
       },
     });
     table.grantReadWriteData(postFn);
