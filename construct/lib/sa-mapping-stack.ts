@@ -20,7 +20,7 @@ export class saMappingStack extends NestedStack {
     
     // Create an S3 bucket
     const bucket = new s3.Bucket(this, 'QABotS3Bucket', {
-      bucketName: 'qabot-asset', 
+      bucketName: 'qabot-assets', 
       versioned: true,
       removalPolicy: RemovalPolicy.DESTROY, // This is just an example, use the appropriate removal policy for your use case
     });
@@ -42,7 +42,7 @@ export class saMappingStack extends NestedStack {
     })
     myRole.addToPolicy(new iam.PolicyStatement({
       resources:['arn:aws:dynamodb:*','arn:aws:s3:::*'],
-      actions:["s3:PutObject","s3:*", "dynamodb:*"]
+      actions:["s3:*", "s3:PostObject","dynamodb:*"]
     }))
     
     const onEvent = new lambda.Function(this, "CreateMappingFunction", {

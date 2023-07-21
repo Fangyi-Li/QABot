@@ -32,7 +32,7 @@ def lambda_handler(event, context):
     
 def post_bd_handler(event, chat_session_table):
     body = json.loads(event['body'])
-    required_fields = ['name', 'bd_id', 'wechatID', 'team', 'site', 'employmentStatus']
+    required_fields = ['name', 'bd_id', 'wechatID', 'team', 'site', 'employmentStatus', 'associatedSA']
     
     if not all(field in body for field in required_fields):
         return {
@@ -63,7 +63,8 @@ def post_bd_handler(event, chat_session_table):
         'wechatID': body['wechatID'],
         'team': body['team'],
         'site': body['site'],
-        'employmentStatus': body['employmentStatus']
+        'employmentStatus': body['employmentStatus'],
+        'associatedSA': body['associatedSA']
     }
 
     response = table.put_item(Item=item)
@@ -123,6 +124,8 @@ def put_bd_handler(event, chat_session_table):
         item['site'] = body['site']
     if 'employmentStatus' in body:
         item['employmentStatus'] = body['employmentStatus']
+    if 'associatedSA' in body:
+        item['associatedSA'] = body['associatedSA']
     
     
     response = table.put_item(Item=item)

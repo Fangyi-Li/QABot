@@ -44,7 +44,6 @@ def post_handler(event, ticket_table):
             })
         }
     ticket_creation_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
-    ticket_completion_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
     
     table = ticket_table
     operation_result = ""
@@ -77,8 +76,7 @@ def post_handler(event, ticket_table):
             "ticket_source":body['ticket_source'],
             "failed_flag":body['failed_flag'],
             "priority":body['priority'],
-            "ticket_creation_date":ticket_creation_date,
-            "ticket_completion_date":ticket_completion_date
+            "ticket_creation_date":ticket_creation_date
         }
     )
 
@@ -105,11 +103,12 @@ def put_handler(event, ticket_table):
     item = response['Item']
 
     ticket_completion_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
-    item['ticket_completion_date'] =ticket_completion_date
     if 'question_answer' in body:
         item['question_answer'] = body['question_answer']
+        item['ticket_completion_date'] =ticket_completion_date
     if 'revised_answer' in body:
         item['revised_answer'] = body['revised_answer']
+        item['ticket_completion_date'] =ticket_completion_date
     if 'tags' in body:
         item['tags'] = body['tags']
     if 'difficulty_level' in body:

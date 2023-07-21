@@ -36,12 +36,17 @@ def post_session_handler(event, chat_session_table):
     session_owner = body['session_owner']
     session_id = str(uuid.uuid1())
     session_creation_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
-    last_update_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
     chat_history = []  # Initialize an empty chat history array
+    new_message = {
+        'sender': session_owner,
+        'message': body['message'],
+        'timestamp': body['timestamp']
+    }
+    chat_history.append(new_message)
 
     post_session(session_id=session_id, chat_session_table=chat_session_table, 
                    session_owner=session_owner, session_creation_date=session_creation_date,
-                   last_update_date=last_update_date, chat_history=chat_history)
+                   chat_history=chat_history)
 
     return {
         'statusCode': 200,
@@ -51,7 +56,7 @@ def post_session_handler(event, chat_session_table):
         })
     }
     
-def post_session(session_id, chat_session_table, session_owner, session_creation_date, last_update_date, chat_history):
+def post_session(session_id, chat_session_table, session_owner, session_creation_date, chat_history):
     # table name
     table = chat_session_table
     operation_result = ""
@@ -64,7 +69,7 @@ def post_session(session_id, chat_session_table, session_owner, session_creation
             'session_id': session_id,
             'session_owner': session_owner,
             'session_creation_date': session_creation_date,
-            'last_update_date': last_update_date,
+            'visibility': True,
             'chat_history': chat_history
         }
     )
@@ -89,8 +94,8 @@ def put_session_handler(event, chat_session_table):
         'message': body['message'],
         'timestamp': body['timestamp']
     }
-
-    put_session(session_id=session_id, chat_session_table=chat_session_table, last_update_date=last_update_date,
+    
+    put_session(body, session_id=session_id, chat_session_table=chat_session_table, last_update_date=last_update_date,
                 new_message=new_message)
 
     return {
@@ -101,7 +106,7 @@ def put_session_handler(event, chat_session_table):
         })
     }
     
-def put_session(session_id, chat_session_table, last_update_date, new_message):
+def put_session(body,session_id, chat_session_table, last_update_date, new_message):
 
     table = chat_session_table
     operation_result = ""
@@ -119,6 +124,8 @@ def put_session(session_id, chat_session_table, last_update_date, new_message):
     
     item['last_update_date'] = last_update_date
     item['chat_history'] = chat_history
+    if 'visibility' in body:
+        item['visibility'] = body['visibility']
 
     # Update the item with modified chat history and last_update_date
     response = table.put_item(Item=item)

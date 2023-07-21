@@ -66,8 +66,6 @@ def post_handler(event, ticket_table):
             "status":body['status'],
             "revised_answer":body['revised_answer'],
             "request_date":datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S"),
-            "reminded":body['reminded'],
-            "request_completion_date":datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
         }
     )
 
@@ -100,16 +98,18 @@ def put_handler(event, ticket_table):
     
     item = response['Item']
 
-    request_completion_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
-    item['request_completion_date'] =request_completion_date
+    
     if 'assigned_sa' in body:
         item['assigned_sa'] = body['assigned_sa']
     if 'revised_answer' in body:
         item['revised_answer'] = body['revised_answer']
+        request_completion_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+        item['request_completion_date'] =request_completion_date
     if 'status' in body:
         item['status'] = body['status']
-    if 'reminded' in body:
-        item['reminded'] = body['reminded']
+        if (body['status'] == 'Alerted'):
+            last_alerted_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+            item['last_alerted_date'] =last_alerted_date
 
     response = table.put_item(Item=item)
 

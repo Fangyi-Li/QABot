@@ -32,7 +32,7 @@ def lambda_handler(event, context):
     
 def post_dgr_handler(event, chat_session_table):
     body = json.loads(event['body'])
-    required_fields = ['name', 'dgr_id', 'wechatID', 'team', 'site', 'employmentStatus', 'slackInUse', 'miniAppInUse', 'wechatBotInUse', 'associatedSA']
+    required_fields = ['name', 'dgr_id', 'wechatID', 'team', 'site', 'employmentStatus', 'slackInUse', 'miniAppInUse', 'wechatBotInUse']
     
     if not all(field in body for field in required_fields):
         return {
@@ -66,8 +66,8 @@ def post_dgr_handler(event, chat_session_table):
         'employmentStatus': body['employmentStatus'],
         'slackInUse': body['slackInUse'],
         'miniAppInUse': body['miniAppInUse'],
-        'wechatBotInUse': body['wechatBotInUse'],
-        'associatedSA': body['associatedSA']
+        'wechatBotInUse': body['wechatBotInUse']
+        
     }
 
     response = table.put_item(Item=item)
@@ -133,8 +133,7 @@ def put_dgr_handler(event, chat_session_table):
         item['miniAppInUse'] = body['miniAppInUse']
     if 'wechatBotInUse' in body:
         item['wechatBotInUse'] = body['wechatBotInUse']
-    if 'associatedSA' in body:
-        item['associatedSA'] = body['associatedSA']
+    
     
     response = table.put_item(Item=item)
     
