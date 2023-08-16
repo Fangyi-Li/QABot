@@ -55,19 +55,6 @@ export class Ec2Stack extends NestedStack {
         role: role
     });
 
-    // Create an asset that will be used as part of User Data to run on first load
-    const asset = new Asset(this, 'UserdataAsset', { path: 'ec2config.sh' });
-    const localPath = ec2Instance.userData.addS3DownloadCommand({
-        bucket: asset.bucket,
-        bucketKey: asset.s3ObjectKey,
-    });
-
-    ec2Instance.userData.addExecuteFileCommand({
-        filePath: localPath,
-        arguments: '--verbose -y'
-    });
-    asset.grantRead(ec2Instance.role);
-
     this.instanceId = ec2Instance.instanceId;
     this.dnsName = ec2Instance.instancePublicDnsName;
     this.publicIP = ec2Instance.instancePublicIp;

@@ -3,8 +3,13 @@ import json
 import boto3
 import os
 import uuid
+import dateutil.tz
+timezone = dateutil.tz.gettz('Asia/Singapore')
 
 def lambda_handler(event, context):
+    """
+    handle crud operation on request table.
+    """
     dynamodb = boto3.resource('dynamodb')
     table_name = os.getenv('TABLE_NAME')
     ticket_table = dynamodb.Table(table_name)
@@ -16,6 +21,8 @@ def lambda_handler(event, context):
             return post_handler(event, ticket_table)
         elif http_method == 'PUT':
             return put_handler(event, ticket_table)
+        elif http_method == 'GET':
+            return get_request_handler(event, ticket_table)
         else:
             return {
                 'statusCode': 400,
@@ -35,7 +42,7 @@ def post_handler(event, ticket_table):
     body = json.loads(event['body'])
     ticket_id = body['ticket_id']
     request_id = 'request_'+ticket_id
-    required_fields = ['ticket_id', 'assigned_sa', 'status', 'revised_answer',  'reminded']
+    required_fields = ['ticket_id', 'assigned_sa', 'status', 'revised_answer']
     
     if not all(field in body for field in required_fields):
         return {
@@ -65,7 +72,7 @@ def post_handler(event, ticket_table):
             "assigned_sa":body['assigned_sa'],
             "status":body['status'],
             "revised_answer":body['revised_answer'],
-            "request_date":datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S"),
+            "request_date":datetime.datetime.now(tz=timezone).strftime("%m/%d/%y,%H:%M:%S")
         }
     )
 
@@ -97,18 +104,18 @@ def put_handler(event, ticket_table):
         }
     
     item = response['Item']
-
     
     if 'assigned_sa' in body:
         item['assigned_sa'] = body['assigned_sa']
     if 'revised_answer' in body:
-        item['revised_answer'] = body['revised_answer']
-        request_completion_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+        revised_answer = item.get('revised_answer', [])
+        item['revised_answer'] = revised_answer.append(body['revised_answer'])
+        request_completion_date = datetime.datetime.now(tz=timezone).strftime("%m/%d/%y,%H:%M:%S")
         item['request_completion_date'] =request_completion_date
     if 'status' in body:
         item['status'] = body['status']
         if (body['status'] == 'Alerted'):
-            last_alerted_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+            last_alerted_date = datetime.datetime.now(tz=timezone).strftime("%m/%d/%y,%H:%M:%S")
             item['last_alerted_date'] =last_alerted_date
 
     response = table.put_item(Item=item)
@@ -153,5 +160,34 @@ def get_response(response, update=False, request_id=None):
             }
         else:
             return {'statusCode': 400, 'body': json.dumps({'message': 'Insert failed'})}
+            
+def get_request_handler(event, chat_session_table):
+    request_id = event['pathParameters'].get('request_id')
+    if not request_id:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({
+                'message': 'Missing required path parameter: request_id'
+            })
+        }
+    
+    table = chat_session_table
+    
+    response = table.get_item(Key={'request_id': request_id})
+    
+    if 'Item' in response:
+        item = response['Item']
+        return {
+            'statusCode': 200,
+            'body': json.dumps(item)
+        }
+    else:
+        return {
+            'statusCode': 404,
+            'body': json.dumps({
+                'message': 'Item not found',
+                'request_id': request_id
+            })
+        }
 
     

@@ -8,15 +8,23 @@ import { Construct } from "constructs";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 interface ResourceNestedStackProps extends NestedStackProps {
   readonly apiId: string;
   readonly rootResourceId: string;
+  readonly vpc:ec2.IVpc;
+  readonly securityGroup: ec2.SecurityGroup;
+  // readonly _role: iam.Role;
 }
 
 export class saMappingStack extends NestedStack {
   constructor(scope: Construct, id: string, props: ResourceNestedStackProps) {
     super(scope, id, props);
+    
+    const _vpc = props.vpc
+    const _securityGroup = props.securityGroup
+    // const _role = props._role
     
     // Create an S3 bucket
     const bucket = new s3.Bucket(this, 'QABotS3Bucket', {
@@ -35,14 +43,16 @@ export class saMappingStack extends NestedStack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
     
-    const myRole:iam.Role = new iam.Role(this, 'myRole', {
+    const myRole = new iam.Role(this, 'myRole', {
       roleName: "myRole",
       assumedBy:new iam.ServicePrincipal("lambda.amazonaws.com")
       // managedPolicies:[iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'), iam.ManagedPolicy.fromAwsManagedPolicyName("AWSLambdaFullAccess")]
     })
+    myRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'));
     myRole.addToPolicy(new iam.PolicyStatement({
       resources:['arn:aws:dynamodb:*','arn:aws:s3:::*'],
-      actions:["s3:*", "s3:PostObject","dynamodb:*"]
+      actions:["s3:*", "s3:PostObject","dynamodb:*", "ec2:CreateNetworkInterface"],
+      effect: iam.Effect.ALLOW,
     }))
     
     const onEvent = new lambda.Function(this, "CreateMappingFunction", {
@@ -51,12 +61,18 @@ export class saMappingStack extends NestedStack {
       code: lambda.Code.fromAsset("../code/ddb/"),
       role: myRole,
       timeout: Duration.minutes(1),
+      vpc:_vpc,
+      vpcSubnets: {
+        subnets: _vpc.privateSubnets,
+      },
+      securityGroups: [_securityGroup],
       environment: {
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
         OBJECT_KEY: 'sa_mapping.csv'
       },
     });
+    
     onEvent.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['s3:GetBucketNotification', 's3:PutBucketNotification'],
@@ -82,19 +98,17 @@ export class saMappingStack extends NestedStack {
       s3.EventType.OBJECT_CREATED_COMPLETE_MULTIPART_UPLOAD,
       new s3n.LambdaDestination(onEvent), 
     )
-
-    // const myProvider= new cr.Provider(this, 'MyProvider', {
-    //   onEventHandler: onEvent,       
-    //   // role: myRole, // must be assumable by the `lambda.amazonaws.com` service principal
-    // });
-
-    // const custom = new CustomResource(this, 'Resource1', { serviceToken: myProvider.serviceToken });
-    // table.node.addDependency(custom);
     
     const postFn = new lambda.Function(this, "PostMappingFunction", {
       runtime:lambda.Runtime.PYTHON_3_7,
       handler: "sa_mapping.lambda_handler",
       code: lambda.Code.fromAsset("../code/ddb/"),
+      role: myRole,
+      vpc:_vpc,
+      vpcSubnets: {
+        subnets: _vpc.privateSubnets,
+      },
+      securityGroups: [_securityGroup],
       environment: {
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
@@ -106,6 +120,12 @@ export class saMappingStack extends NestedStack {
       runtime: lambda.Runtime.PYTHON_3_7,
       handler: "sa_mapping.lambda_handler",
       code: lambda.Code.fromAsset("../code/ddb/"),
+      role: myRole,
+      vpc:_vpc,
+      vpcSubnets: {
+        subnets: _vpc.privateSubnets,
+      },
+      securityGroups: [_securityGroup],
       environment: {
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
@@ -117,12 +137,35 @@ export class saMappingStack extends NestedStack {
       runtime: lambda.Runtime.PYTHON_3_7,
       handler: "sa_mapping.lambda_handler",
       code: lambda.Code.fromAsset("../code/ddb/"),
+      role: myRole,
+      vpc:_vpc,
+      vpcSubnets: {
+        subnets: _vpc.privateSubnets,
+      },
+      securityGroups: [_securityGroup],
       environment: {
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
         OBJECT_KEY: 'sa_mapping.csv'
       },
     });
+    const getFn = new lambda.Function(this, "getMappingFunction", {
+      runtime: lambda.Runtime.PYTHON_3_7,
+      handler: "sa_mapping.lambda_handler",
+      code: lambda.Code.fromAsset("../code/ddb/"),
+      role: myRole,
+      vpc:_vpc,
+      vpcSubnets: {
+        subnets: _vpc.privateSubnets,
+      },
+      securityGroups: [_securityGroup],
+      environment: {
+        TABLE_NAME: table.tableName,
+        BUCKET_NAME: bucket.bucketName,
+        OBJECT_KEY: 'sa_mapping.csv'
+      },
+    });
+    table.grantReadWriteData(getFn);
     table.grantReadWriteData(postFn);
     table.grantReadWriteData(putFn);
     table.grantReadWriteData(deleteFn);
@@ -134,9 +177,10 @@ export class saMappingStack extends NestedStack {
     });
     // Define the API resources and methods
     const session = api.root.addResource('bd_mapping');
-    session.addMethod("POST", new LambdaIntegration(postFn));
-    session.addMethod("PUT", new LambdaIntegration(putFn));
-    session.addMethod("DELETE", new LambdaIntegration(deleteFn))
+    session.addResource('{bd_id}').addMethod("GET", new LambdaIntegration(getFn), {apiKeyRequired: true});
+    session.addMethod("POST", new LambdaIntegration(postFn), {apiKeyRequired: true});
+    session.addMethod("PUT", new LambdaIntegration(putFn), {apiKeyRequired: true});
+    session.addMethod("DELETE", new LambdaIntegration(deleteFn), {apiKeyRequired: true});
     
     // Output the DynamoDB table name and Lambda function ARN for convenience
     new CfnOutput(this, 'DynamoDBTableName', { value: table.tableName });

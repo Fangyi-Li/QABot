@@ -3,8 +3,21 @@ import json
 import boto3
 import os
 import uuid
+from decimal import Decimal
+import dateutil.tz
+timezone = dateutil.tz.gettz('Asia/Singapore')
 
+
+header = {
+            "Access-Control-Allow-Headers" : "Content-Type",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "OPTIONS,POST,GET,PUT",
+            # "Access-Control-Allow-Credentials": True
+        }
 def lambda_handler(event, context):
+    """handle rest api request to
+    perform CRUD operation on ticket table
+    """
     dynamodb = boto3.resource('dynamodb')
     table_name = os.getenv('TABLE_NAME')
     ticket_table = dynamodb.Table(table_name)
@@ -16,9 +29,12 @@ def lambda_handler(event, context):
             return post_handler(event, ticket_table)
         elif http_method == 'PUT':
             return put_handler(event, ticket_table)
+        elif http_method == 'GET':
+            return get_ticket_handler(event, ticket_table)
         else:
             return {
                 'statusCode': 400,
+                'headers': header,
                 'body': json.dumps({
                     'message': 'Invalid request method'
                 })
@@ -27,6 +43,7 @@ def lambda_handler(event, context):
         # Return an error response
         return {
             'statusCode': 500,
+            'headers': header,
             'body': json.dumps({'error': str(e)})
         }
         
@@ -39,11 +56,12 @@ def post_handler(event, ticket_table):
     if not all(field in body for field in required_fields):
         return {
             'statusCode': 400,
+            'headers': header,
             'body': json.dumps({
                 'message': 'Missing required fields'
             })
         }
-    ticket_creation_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+    ticket_creation_date = datetime.datetime.now(tz=timezone).strftime("%m/%d/%y,%H:%M:%S")
     
     table = ticket_table
     operation_result = ""
@@ -52,6 +70,7 @@ def post_handler(event, ticket_table):
     if 'Item' in response:
         return {
             'statusCode': 409,
+            'headers': header,
             'body': json.dumps({
                 'message': 'Item already exists',
                 'ticket_id': ticket_id
@@ -94,6 +113,7 @@ def put_handler(event, ticket_table):
     if 'Item' not in response:
         return {
             'statusCode': 404,
+            'headers': header,
             'body': json.dumps({
                 'message': 'Item not found',
                 'ticket_id': ticket_id
@@ -102,7 +122,7 @@ def put_handler(event, ticket_table):
     
     item = response['Item']
 
-    ticket_completion_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+    ticket_completion_date = datetime.datetime.now(tz=timezone).strftime("%m/%d/%y,%H:%M:%S")
     if 'question_answer' in body:
         item['question_answer'] = body['question_answer']
         item['ticket_completion_date'] =ticket_completion_date
@@ -140,12 +160,13 @@ def get_response(response, update=False, ticket_id=None):
         if operation_result == 'success':
             return {
                 'statusCode': 200,
+                'headers': header,
                 'body': json.dumps({
                     'message': 'Data updated successfully',
                 })
             }
         else:
-            return {'statusCode': 400, 'body': json.dumps({'message': 'No updates specified'})}
+            return {'statusCode': 400,'headers': header, 'body': json.dumps({'message': 'No updates specified'})}
     else:
         if "ResponseMetadata" in response.keys():
             if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
@@ -158,6 +179,7 @@ def get_response(response, update=False, ticket_id=None):
         if operation_result == 'success':
             return {
                 'statusCode': 200,
+                'headers': header,
                 'body': json.dumps({
                     'message': 'Data inserted successfully',
                     'ticket_id': ticket_id
@@ -166,4 +188,57 @@ def get_response(response, update=False, ticket_id=None):
         else:
             return {'statusCode': 400, 'body': json.dumps({'message': 'Insert failed'})}
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Decimal):
+            if o % 1 == 0:
+                return int(o)
+            else:
+                return float(o)
+        return super(DecimalEncoder, self).default(o)
+
+def get_ticket_handler(event, chat_session_table):
+    ticket_id = event['pathParameters'].get('ticket_id')
+    if not ticket_id:
+        return {
+            'statusCode': 400,
+            'headers': header,
+            'body': json.dumps({
+                'message': 'Missing required path parameter: ticket_id'
+            })
+        }
     
+    table = chat_session_table
+    
+    # to get all ticket
+    if ticket_id == "all":
+        response = table.scan()
+        items = response['Items']
+        while 'LastEvaluatedKey' in response:
+            response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+            items.extend(response['Items'])
+        return {
+            'statusCode': 200,
+            'headers': header,
+            'body': json.dumps(items, cls=DecimalEncoder)
+        }
+    else:
+        # get ticket with specific ticket_id
+        response = table.get_item(Key={'ticket_id': ticket_id})
+        
+        if 'Item' in response:
+            item = response['Item']
+            return {
+                'statusCode': 200,
+                'headers': header,
+                'body': json.dumps(item, cls=DecimalEncoder)
+            }
+        else:
+            return {
+                'statusCode': 404,
+                'headers': header,
+                'body': json.dumps({
+                    'message': 'Item not found',
+                    'ticket_id': ticket_id
+                })
+            }

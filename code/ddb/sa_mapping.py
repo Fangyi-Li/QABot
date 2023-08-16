@@ -13,15 +13,19 @@ object_key = os.getenv('OBJECT_KEY')
 def lambda_handler(event, context):
     http_method= event['httpMethod']
     table = dynamodb.Table(table_name)
-    body = json.loads(event['body'])
     try:
        
         if http_method == 'POST':
+            body = json.loads(event['body'])
             return post_handler(body, table)
         elif http_method == 'PUT':
+            body = json.loads(event['body'])
             return put_handler(body, table)
         elif http_method == 'DELETE':
+            body = json.loads(event['body'])
             return delete_handler(body, table)
+        elif http_method == 'GET':
+            return get_handler(event, table)
         else:
             return {
                 'statusCode': 400,
@@ -67,7 +71,7 @@ def post_handler(body, table):
         Item={
             "bd_login":bd_login,
             "sa_login":sa_login,
-            "insert_date":datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
+            "last_update_date":datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
         }
     )
 
@@ -100,7 +104,7 @@ def put_handler(body, table):
     item = response['Item']
 
     insert_date = datetime.datetime.now().strftime("%m/%d/%y,%H:%M:%S")
-    item['insert_date'] =insert_date
+    item['last_update_date'] =insert_date
     item['sa_login'] = sa_login
 
     response = table.put_item(Item=item)
@@ -160,3 +164,32 @@ def get_response(response, update=False, bd_login=None):
             }
         else:
             return {'statusCode': 400, 'body': json.dumps({'message': 'Insert failed'})}
+            
+def get_handler(event, chat_session_table):
+    bd_login = event['pathParameters'].get('bd_id')
+    if not bd_login:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({
+                'message': 'Missing required path parameter: bd_id'
+            })
+        }
+    
+    table = chat_session_table
+    
+    response = table.get_item(Key={'bd_login': bd_login})
+    
+    if 'Item' in response:
+        item = response['Item']
+        return {
+            'statusCode': 200,
+            'body': json.dumps(item)
+        }
+    else:
+        return {
+            'statusCode': 404,
+            'body': json.dumps({
+                'message': 'Item not found',
+                'bd_login': bd_login
+            })
+        }
