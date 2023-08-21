@@ -49,6 +49,7 @@ export class QaBotStack extends cdk.Stack {
         allowMethods: ["OPTIONS", "GET", "POST","PUT"],
         allowHeaders: Cors.DEFAULT_HEADERS,
       },
+      cloudWatchRole: true,
       deployOptions: {
                 stageName: 'prod',
                 metricsEnabled: true,

@@ -28,7 +28,7 @@ export class saMappingStack extends NestedStack {
     
     // Create an S3 bucket
     const bucket = new s3.Bucket(this, 'QABotS3Bucket', {
-      bucketName: 'qabot-assets', 
+      bucketName: 'techbot-assets', 
       versioned: true,
       removalPolicy: RemovalPolicy.DESTROY, // This is just an example, use the appropriate removal policy for your use case
     });
